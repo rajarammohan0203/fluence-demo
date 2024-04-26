@@ -72,4 +72,4 @@ jobs:
             git add .
             git commit -m "Update image tag to $TAG"
             git config credential.helper 'cache --timeout=120'
-            git push -q https://Abhilash-1201:$GITHUB_PERSONAL_TOKEN@github.com/Abhilash-1201/spring-boot-dockerize-argocd.git main 
+            git push -q https://Abhilash-1201:$GITHUB_PERSONAL_TOKEN@github.com/Abhilash-1201/spring-boot-dockerize-argocd.git main  
