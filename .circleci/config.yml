@@ -1,30 +1,82 @@
 version: 2.1
+
 orbs:
   slack: circleci/slack@4.9.3
+
 jobs:
-  notify:
+  build:
     docker:
-      - image: 'cimg/base:stable'
+      - image: maven:3.8.1-jdk-11
+      - image: cimg/base:2022.09
+        auth:
+          username: $DOCKERHUB_USERNAME
+          password: $DOCKERHUB_PASSWORD
+    working_directory: ~/project
     steps:
-      - slack/notify:
-          custom: |
-            {
-              "blocks": [
-                {
-                  "type": "section",
-                  "fields": [
-                    {
-                      "type": "plain_text",
-                      "text": "*This is a text notification*",
-                      "emoji": true
-                    }
-                  ]
-                }
-              ]
-            }
-          event: always
+      - checkout
+      - setup_remote_docker
+      - restore_cache:
+          keys:
+            - v1-{{ .Branch }}
+          paths:
+            - /caches/app.tar
+      - run:
+          name: Set up JDK 11
+          command: |
+            echo 'export JAVA_HOME="/usr/local/openjdk-11"' >> $BASH_ENV
+            echo 'export PATH="$JAVA_HOME/bin:$PATH"' >> $BASH_ENV
+            source $BASH_ENV
+      - run:
+          name: Build and test Maven project
+          command: mvn clean install
+      - run:
+          name: Load Docker image layer cache
+          command: |
+            set +o pipefail
+            docker load -i /caches/app.tar | true
+      - run:
+          name: Build Docker image
+          command: |
+            apt-get update
+            apt-get install -y docker.io
+            DOCKER_IMAGE=appcicd
+            docker build -t $DOCKER_IMAGE .
+            docker images
+            IMAGE_ID=$(docker images -q $DOCKER_IMAGE)
+            echo "Built Docker image ID: $IMAGE_ID with tag: $DOCKER_IMAGE"
+            echo "export DOCKER_IMAGE=$DOCKER_IMAGE" >> $BASH_ENV
+            source $BASH_ENV
+      - run:
+          name: Login to JFrog Artifactory
+          command: |
+            echo $JFROG_PASSWORD | docker login -u $JFROG_USERNAME --password-stdin fluencedevops.jfrog.io
+      - run:
+          name: Tag and Push Docker image to JFrog Artifactory
+          command: |
+            docker tag $DOCKER_IMAGE fluencedevops.jfrog.io/fluence-repo/$DOCKER_IMAGE:0.1.$CIRCLE_BUILD_NUM
+            docker push fluencedevops.jfrog.io/fluence-repo/$DOCKER_IMAGE:0.1.$CIRCLE_BUILD_NUM
+      - run:
+          name: Updating Manifest file 
+          command: |
+            TAG=0.1.$CIRCLE_BUILD_NUM
+            git clone https://github.com/Abhilash-1201/spring-boot-dockerize-argocd.git
+            git config --global user.email "rlabhilash1201@gmail.com"
+            git config --global user.name "Abhilash-1201"
+            pwd
+            cd spring-boot-dockerize-argocd
+            pwd
+            echo $TAG
+            sed -i "s/appcicd:0.1.*/appcicd:$TAG/g" manifest/deployment.yaml
+            cat manifest/deployment.yaml
+            git add .
+            git commit -m "Update image tag to $TAG"
+            git config credential.helper 'cache --timeout=120'
+            git push -q https://Abhilash-1201:$GITHUB_PERSONAL_TOKEN@github.com/Abhilash-1201/spring-boot-dockerize-argocd.git main
+
 workflows:
+  version: 2
   send-notification:
     jobs:
-      - notify:
-          context: slack-secrets
+      - build
+      - slack/notify:
+          event: always
