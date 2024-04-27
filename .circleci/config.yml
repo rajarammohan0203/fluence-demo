@@ -2,7 +2,7 @@ version: 2.1
 
 orbs:
   slack: circleci/slack@4.9.3
-  
+
 jobs:
   build:
     docker:
@@ -73,16 +73,22 @@ jobs:
             git config credential.helper 'cache --timeout=120'
             git push -q https://Abhilash-1201:$GITHUB_PERSONAL_TOKEN@github.com/Abhilash-1201/spring-boot-dockerize-argocd.git main
 
+  notify_slack:
+    docker:
+      - image: 'cimg/base:stable'
+    steps:
+      - slack/notify:
+          event: fail
+          template: basic_fail_1
+      - slack/notify:
+          event: pass
+          template: success_tagged_deploy_1
+
 workflows:
   version: 2
   send-notification:
     jobs:
       - build
-      - slack/notify:
-          event: fail
-          template: basic_fail_1
-  
-      - slack/notify:
-          event: pass
-          template: success_tagged_deploy_1
-         
+      - notify_slack:
+          requires:
+            - build
