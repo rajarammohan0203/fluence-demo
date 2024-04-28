@@ -53,8 +53,8 @@ jobs:
       - run:
           name: Tag and Push Docker image to JFrog Artifactory
           command: |
-            docker tag $DOCKER_IMAGE fluencedevops.jfrog.io/fluence-demo/$DOCKER_IMAGE:0.1.$CIRCLE_BUILD_NUM
-            docker push fluencedevops.jfrog.io/fluence-demo/$DOCKER_IMAGE:0.1.$CIRCLE_BUILD_NUM
+            docker tag $DOCKER_IMAGE fluencedevops.jfrog.io/fluence-repo/$DOCKER_IMAGE:0.1.$CIRCLE_BUILD_NUM
+            docker push fluencedevops.jfrog.io/fluence-repo/$DOCKER_IMAGE:0.1.$CIRCLE_BUILD_NUM
       - run:
           name: Updating Manifest file 
           command: |
