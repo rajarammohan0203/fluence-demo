@@ -91,4 +91,4 @@ workflows:
       - build
       - notify_slack:
           requires:
-            - build 
+            - build  
